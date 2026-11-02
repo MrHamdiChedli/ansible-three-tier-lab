@@ -1,0 +1,33 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible and its linter
+        run: pip install "ansible-core>=2.17,<2.18" ansible-lint
+
+      - name: Install the collections the roles use
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Lint the playbook and roles
+        working-directory: ansible
+        run: ansible-lint --profile production site.yml
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the shell scripts
+        run: shellcheck bootstrap/*.sh tests/*.sh

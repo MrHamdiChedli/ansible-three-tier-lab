@@ -1,0 +1,38 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+
+- name: Write the load balancer configuration
+  ansible.builtin.template:
+    src: app.conf.j2
+    dest: /etc/nginx/sites-available/app
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Enable the load balancer site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/app
+    dest: /etc/nginx/sites-enabled/app
+    state: link
+  notify: Reload Nginx
+
+- name: Disable the default site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Open HTTP to everyone
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Start Nginx now and at every boot
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started

@@ -1,0 +1,59 @@
+---
+- name: Install PostgreSQL
+  ansible.builtin.apt:
+    name:
+      - postgresql
+      - python3-psycopg2 # needed by the community.postgresql modules
+
+- name: Listen on the private network
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_conf_dir }}/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: Restart PostgreSQL
+
+- name: Let only the web servers connect
+  community.postgresql.postgresql_pg_hba:
+    dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    contype: host
+    databases: "{{ db_name }}"
+    users: "{{ db_user }}"
+    source: "{{ item }}/32"
+    method: scram-sha-256
+  loop: "{{ web_ips }}"
+  notify: Restart PostgreSQL
+
+- name: Create the application user
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    no_password_changes: true # set once, so a re-run reports no change
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: Create the application database
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+  become: true
+  become_user: postgres
+
+- name: Create the visits table
+  community.postgresql.postgresql_table:
+    login_db: "{{ db_name }}"
+    name: visits
+    owner: "{{ db_user }}"
+    columns:
+      - id INTEGER PRIMARY KEY
+      - total BIGINT NOT NULL
+  become: true
+  become_user: postgres
+
+- name: Open PostgreSQL to the web servers only
+  community.general.ufw:
+    rule: allow
+    port: "5432"
+    proto: tcp
+    from_ip: "{{ item }}"
+  loop: "{{ web_ips }}"

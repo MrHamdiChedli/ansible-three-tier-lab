@@ -1,0 +1,11 @@
+---
+# Checking the configuration first means a typo never takes the load balancer down.
+- name: Reload Nginx
+  ansible.builtin.command: nginx -t
+  changed_when: true
+  notify: Apply Nginx reload
+
+- name: Apply Nginx reload
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

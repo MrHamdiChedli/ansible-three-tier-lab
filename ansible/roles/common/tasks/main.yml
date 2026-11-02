@@ -1,0 +1,19 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - acl # lets Ansible run tasks as an unprivileged user such as postgres
+      - ufw
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Allow SSH before turning the firewall on
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Turn the firewall on, denying everything else
+  community.general.ufw:
+    state: enabled
+    policy: deny

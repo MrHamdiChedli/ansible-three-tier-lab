@@ -1,0 +1,15 @@
+[Unit]
+Description=Visit counter (Flask + Gunicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=app
+EnvironmentFile=/etc/app.env
+WorkingDirectory=/opt/app
+ExecStart=/opt/app/venv/bin/gunicorn --workers 2 --bind 0.0.0.0:{{ app_port }} app:app
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
